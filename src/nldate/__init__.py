@@ -136,8 +136,9 @@ def _find_absolute_date(s: str, today: date) -> date | None:
 
     # Pattern: month_name day, year  or  month_name day year
     for month_name, month_num in _MONTHS.items():
-        # "december 1, 2025" or "december 1 2025"
-        pattern = rf"\b{month_name}\s+(\d{{1,2}})(?:st|nd|rd|th)?\s*,?\s*(\d{{4}})\b"
+        mn = rf"{month_name}\.?"
+        # "december 1, 2025" or "december 1 2025" or "dec. 1, 2025"
+        pattern = rf"\b{mn}\s+(\d{{1,2}})(?:st|nd|rd|th)?\s*,?\s*(\d{{4}})\b"
         m = re.search(pattern, s_clean)
         if m:
             day, year = int(m.group(1)), int(m.group(2))
@@ -146,7 +147,7 @@ def _find_absolute_date(s: str, today: date) -> date | None:
             except ValueError:
                 return None
         # "december 2025" (no day -> use 1st)
-        pattern = rf"\b{month_name}\s+(\d{{4}})\b"
+        pattern = rf"\b{mn}\s+(\d{{4}})\b"
         m = re.search(pattern, s_clean)
         if m:
             year = int(m.group(1))
@@ -154,8 +155,8 @@ def _find_absolute_date(s: str, today: date) -> date | None:
                 return date(year, month_num, 1)
             except ValueError:
                 return None
-        # "1 december 2025" / "1st of december 2025"
-        pattern = rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+(?:of\s+)?{month_name}\s*,?\s*(\d{{4}})\b"
+        # "1 december 2025" / "1st of december 2025" / "1 dec. 2025"
+        pattern = rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+(?:of\s+)?{mn}\s*,?\s*(\d{{4}})\b"
         m = re.search(pattern, s_clean)
         if m:
             day, year = int(m.group(1)), int(m.group(2))
@@ -166,7 +167,8 @@ def _find_absolute_date(s: str, today: date) -> date | None:
 
     # Month name + day, no year -> assume current year (or next year if past)
     for month_name, month_num in _MONTHS.items():
-        pattern = rf"\b{month_name}\s+(\d{{1,2}})(?:st|nd|rd|th)?\b"
+        mn = rf"{month_name}\.?"
+        pattern = rf"\b{mn}\s+(\d{{1,2}})(?:st|nd|rd|th)?\b"
         m = re.search(pattern, s_clean)
         if m:
             day = int(m.group(1))
@@ -178,7 +180,7 @@ def _find_absolute_date(s: str, today: date) -> date | None:
             except ValueError:
                 return None
         # day + month name, no year
-        pattern = rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+(?:of\s+)?{month_name}\b"
+        pattern = rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+(?:of\s+)?{mn}\b"
         m = re.search(pattern, s_clean)
         if m:
             day = int(m.group(1))
@@ -228,7 +230,7 @@ def _find_weekday(s: str, today: date) -> date | None:
 
 def _parse_relative(s: str, today: date) -> date | None:
     """Parse purely relative expressions like 'today', 'in 3 days', '2 weeks ago'."""
-    s_lower = s.lower().strip()
+    s_lower = re.sub(r"\s+", " ", s.lower().strip())
 
     if s_lower in ("today",):
         return today
@@ -236,6 +238,36 @@ def _parse_relative(s: str, today: date) -> date | None:
         return today + timedelta(days=1)
     if s_lower in ("yesterday",):
         return today - timedelta(days=1)
+
+    # "the day after tomorrow" / "day after tomorrow"
+    if re.fullmatch(r"(the\s+)?day\s+after\s+tomorrow", s_lower):
+        return today + timedelta(days=2)
+    # "the day before yesterday" / "day before yesterday"
+    if re.fullmatch(r"(the\s+)?day\s+before\s+yesterday", s_lower):
+        return today - timedelta(days=2)
+    # "the day before tomorrow"
+    if re.fullmatch(r"(the\s+)?day\s+before\s+tomorrow", s_lower):
+        return today
+    # "the day after yesterday"
+    if re.fullmatch(r"(the\s+)?day\s+after\s+yesterday", s_lower):
+        return today
+
+    # next/last/this week|month|year
+    m = re.fullmatch(r"(next|last|this)\s+(week|month|year)", s_lower)
+    if m:
+        direction_word, unit = m.group(1), m.group(2)
+        if direction_word == "next":
+            n = 1
+        elif direction_word == "last":
+            n = -1
+        else:  # this
+            n = 0
+        if unit == "week":
+            return today + timedelta(weeks=n)
+        if unit == "month":
+            return _add_months(today, n)
+        if unit == "year":
+            return _add_years(today, n)
 
     # "in N days/weeks/months/years"
     m = re.match(r"^in\s+(.+)$", s_lower)

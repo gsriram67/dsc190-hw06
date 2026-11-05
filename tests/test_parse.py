@@ -32,6 +32,9 @@ class TestAbsoluteDates:
     def test_abbreviated_month(self) -> None:
         assert parse("Dec 1 2025", today=TODAY) == date(2025, 12, 1)
 
+    def test_abbreviated_month_with_period(self) -> None:
+        assert parse("Dec. 1, 2025", today=TODAY) == date(2025, 12, 1)
+
     def test_day_month_year(self) -> None:
         assert parse("1 December 2025", today=TODAY) == date(2025, 12, 1)
 
@@ -89,6 +92,39 @@ class TestRelativeDates:
 
     def test_two_weeks_from_tomorrow(self) -> None:
         assert parse("two weeks from tomorrow", today=TODAY) == date(2025, 11, 20)
+
+    def test_next_week(self) -> None:
+        assert parse("next week", today=TODAY) == date(2025, 11, 12)
+
+    def test_last_week(self) -> None:
+        assert parse("last week", today=TODAY) == date(2025, 10, 29)
+
+    def test_this_week(self) -> None:
+        assert parse("this week", today=TODAY) == TODAY
+
+    def test_next_month(self) -> None:
+        assert parse("next month", today=TODAY) == date(2025, 12, 5)
+
+    def test_last_month(self) -> None:
+        assert parse("last month", today=TODAY) == date(2025, 10, 5)
+
+    def test_next_year(self) -> None:
+        assert parse("next year", today=TODAY) == date(2026, 11, 5)
+
+    def test_last_year(self) -> None:
+        assert parse("last year", today=TODAY) == date(2024, 11, 5)
+
+    def test_day_after_tomorrow(self) -> None:
+        assert parse("the day after tomorrow", today=TODAY) == date(2025, 11, 7)
+
+    def test_day_before_yesterday(self) -> None:
+        assert parse("day before yesterday", today=TODAY) == date(2025, 11, 3)
+
+    def test_in_a_week(self) -> None:
+        assert parse("in a week", today=TODAY) == date(2025, 11, 12)
+
+    def test_a_month_ago(self) -> None:
+        assert parse("a month ago", today=TODAY) == date(2025, 10, 5)
 
 
 class TestWeekdays:
