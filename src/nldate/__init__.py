@@ -113,8 +113,8 @@ def _find_absolute_date(s: str, today: date) -> date | None:
     """Try to find an absolute date in the string. Returns the date or None."""
     s_lower = s.lower()
 
-    # ISO format: YYYY-MM-DD
-    m = re.search(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b", s_lower)
+    # ISO format: YYYY-MM-DD or YYYY/MM/DD
+    m = re.search(r"\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b", s_lower)
     if m:
         year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
         try:
